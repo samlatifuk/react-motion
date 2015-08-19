@@ -243,26 +243,7 @@ export const Spring = React.createClass({
   },
 });
 
-export const Wrap = React.createClass({
-  childContextTypes: {
-    tos: PropTypes.shape({
-      currValues: PropTypes.oneOfType([
-        PropTypes.object,
-        PropTypes.array,
-      ]).isRequired,
-      currVelocities: PropTypes.oneOfType([
-        PropTypes.object,
-        PropTypes.array,
-      ]).isRequired,
-    }).isRequired,
-  },
-
-  getChildContext() {
-    return {
-      tos: this.curr,
-    };
-  },
-
+export const Springs = React.createClass({
   propTypes: {
     tos: PropTypes.func.isRequired,
   },
@@ -342,25 +323,14 @@ export const Wrap = React.createClass({
   },
 
   render() {
-    const {children} = this.props;
-    return (
-      <div>{children}</div>
-    );
+    const renderedChildren = this.props.children(this.curr.currValues);
+    return renderedChildren && React.Children.only(renderedChildren);
   },
 });
 
-export const S = React.createClass({
-  contextTypes: {
-    tos: PropTypes.shape({
-      currValues: PropTypes.oneOfType([
-        PropTypes.object,
-        PropTypes.array,
-      ]).isRequired,
-    }).isRequired,
-  },
-
+export const Child = React.createClass({
   propTypes: {
-    to: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+    to: PropTypes.object.isRequired,
   },
 
   _rafId: null,
@@ -385,7 +355,7 @@ export const S = React.createClass({
 
   startRaf() {
     this._rafId = requestAnimationFrame(() => {
-      this.step(this.context.tos.currValues[this.props.to]);
+      this.step(this.props.to);
       this.startRaf();
     });
   },
@@ -395,8 +365,8 @@ export const S = React.createClass({
     return (
       <div
         ref="comp"
-        onMouseDown={(...args) => onMouseDown && onMouseDown(...args, this.curr)}
-        onTouchStart={(...args) => onTouchStart && onTouchStart(...args, this.curr)}
+        onMouseDown={(...args) => onMouseDown && onMouseDown(...args, this.props.to)}
+        onTouchStart={(...args) => onTouchStart && onTouchStart(...args, this.props.to)}
         {...rest} />
     );
   },

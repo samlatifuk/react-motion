@@ -13,7 +13,7 @@ const Demo = React.createClass({
   },
 
   handleMouseMove({pageX, pageY}) {
-    this.setState({mouse: [pageX, pageY]});
+    this.setState({mouse: [pageX - 25, pageY - 25]});
   },
 
   handleTouchMove({touches}) {
@@ -40,13 +40,17 @@ const Demo = React.createClass({
   render() {
     return (
       <Springs tos={this.getEndValue}>
-        {range(6).map(i =>
-          <Child
-            key={i}
-            className={`demo1-ball ball-${i % 6}`}
-            to={i}
-            style={{zIndex: 6 - i}} />
-        )}
+        {configs =>
+          <div>
+            {configs.map((config, i) =>
+              <Child
+                key={i}
+                className={`demo1-ball ball-${i % 6}`}
+                to={config}
+                style={{zIndex: 6 - i}} />
+            )}
+          </div>
+        }
       </Springs>
     );
   },
