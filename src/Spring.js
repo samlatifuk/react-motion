@@ -1,7 +1,10 @@
 import React, {PropTypes} from 'react';
 import zero from './zero';
+import noVelocity from './noVelocity';
+import mergeDiff from './mergeDiff';
 import stepper from './stepper';
 import presets from './presets';
+import hasReachedDest from './hasReachedDest';
 
 function mapObj(o, f) {
   return Object.keys(o).reduce((acc, key) => {
@@ -33,6 +36,7 @@ function forEach(coll, f) {
 
 const specialProps = {
   transform: true,
+  data: true,
 };
 
 const methods = {
@@ -47,6 +51,12 @@ const methods = {
   },
   width(node, x) {
     node.style.width = x + 'px';
+  },
+  opacity(node, x) {
+    node.style.opacity = x;
+  },
+  data() {
+    // nothing. used by TransitionSpring to hold extra data
   },
   transform(node, x) {
     if (typeof x !== 'object') {
@@ -95,6 +105,10 @@ const specialStep = {
 
     return [nextCurrValue, nextCurrVelocity];
   },
+
+  data(a) {
+    return [a, a];
+  },
 };
 
 const specialInitVelocity = {
@@ -104,6 +118,10 @@ const specialInitVelocity = {
       // anything to 0 anyway
       return _value.map(zero);
     });
+  },
+
+  data(a) {
+    return a;
   },
 };
 
@@ -118,6 +136,10 @@ const specialStrip = {
       });
     });
   },
+
+  data(a) {
+    return a;
+  },
 };
 
 function stripWrappers(to) {
@@ -126,6 +148,15 @@ function stripWrappers(to) {
       return specialStrip[key](value);
     }
     return value._isConfig ? value.val : value;
+  });
+}
+
+function getInitialVelocities(style) {
+  return mapObj(style, (value, key) => {
+    if (specialProps[key]) {
+      return specialInitVelocity[key](value);
+    }
+    return 0;
   });
 }
 
@@ -163,12 +194,7 @@ export const Spring = React.createClass({
   componentWillMount() {
     const {to} = this.props;
     const currValues = stripWrappers(to);
-    const currVelocities = mapObj(currValues, (value, key) => {
-      if (specialProps[key]) {
-        return specialInitVelocity[key](value);
-      }
-      return 0;
-    });
+    const currVelocities = getInitialVelocities(currValues);
     this.curr = {currValues, currVelocities};
   },
 
@@ -372,3 +398,162 @@ export const Child = React.createClass({
   },
 });
 
+export const TransitionSpring = React.createClass({
+  propTypes: {
+    tos: PropTypes.object.isRequired,
+    willLeave: PropTypes.func.isRequired,
+    willEnter: PropTypes.func.isRequired,
+  },
+
+  curr: null,
+  _rafId: null,
+
+  getDefaultProps() {
+    return {
+      willEnter: (_, value) => value,
+      willLeave: () => null,
+    };
+  },
+
+  componentWillMount() {
+    this.curr = {};
+
+    let asd = _currValues => mapObj(_currValues, (value, key) => {
+      if (specialProps[key]) {
+        return specialInitVelocity[key](value);
+      }
+      return 0;
+    });
+
+    const currValues = map(this.props.tos, stripWrappers);
+    const currVelocities = map(currValues, asd);
+
+    this.curr = {currValues, currVelocities, mergedTos: this.props.tos};
+  },
+
+  componentWillReceiveProps(nextProps) {
+    const {currValues, currVelocities, mergedTos} = this.curr;
+    const {willLeave, willEnter, tos} = nextProps;
+
+    // mergedTos: {a: 1, b: 2, x: 10}
+    // tos: {b: 3, c: 4}
+    // newMergedTos: {a: 1, b: 3, c: 4} a stays x is gone
+    let newMergedTos = mergeDiff(
+      mergedTos,
+      tos,
+      key => {
+        const res = willLeave(key, currValues[key], tos, currValues, currVelocities);
+        if (res == null) {
+          return null;
+        }
+
+        // currVelocities[key]: {opacity: 0}
+        if (noVelocity(currVelocities[key]) &&
+          hasReachedDest(stripWrappers(currValues[key]), stripWrappers(res))) {
+          return null;
+        }
+        return res;
+      },
+    );
+
+    // patch the currs
+    // currValues: {a: 5, b: 6, x: 7}
+    // newCurrValues: {a: 5, b: 6, c: 123}
+    let newCurrValues = {};
+    let newCurrVelocities = {};
+    Object.keys(newMergedTos).forEach(key => {
+      if (currValues.hasOwnProperty(key)) {
+        newCurrValues[key] = currValues[key];
+        newCurrVelocities[key] = currVelocities[key];
+      } else {
+        const enterValue = willEnter(key, newMergedTos[key], tos, currValues, currVelocities);
+        newCurrValues[key] = enterValue;
+        newCurrVelocities[key] = getInitialVelocities(enterValue);
+      }
+    });
+
+    this.curr = {
+      currValues: newCurrValues,
+      currVelocities: newCurrVelocities,
+      mergedTos: newMergedTos,
+    };
+  },
+
+  step(tos) {
+    const {currValues, currVelocities, mergedTos} = this.curr;
+
+    let forceUpdate = false;
+
+    forEach(mergedTos, (to, idxKey) => {
+      if (noVelocity(currVelocities[idxKey]) &&
+          hasReachedDest(stripWrappers(currValues[idxKey]), stripWrappers(mergedTos[idxKey])) &&
+          !this.props.tos.hasOwnProperty(idxKey)) {
+        delete currValues[idxKey];
+        delete currVelocities[idxKey];
+        delete mergedTos[idxKey];
+        forceUpdate = true;
+        return null;
+      }
+
+      forEachObj(to, (dest, key) => {
+        // currValues[idxKey]: {opacity: 1}
+
+        let nextCurrValue;
+        let nextCurrVelocity;
+
+        let currValue = currValues[idxKey][key];
+        const currVelocity = currVelocities[idxKey][key];
+        currValue = currValue._isConfig ? currValue.val : currValue;
+
+        if (specialProps[key]) {
+          [nextCurrValue, nextCurrVelocity] = specialStep[key](
+            dest, currValue, currVelocity
+          );
+        } else {
+          const _dest = dest._isConfig ? dest : val(dest);
+
+          if (_dest._stop) {
+            [nextCurrValue, nextCurrVelocity] = [_dest.val, 0];
+          } else {
+            [nextCurrValue, nextCurrVelocity] = stepper(
+              1 / 60,
+              currValue,
+              currVelocity,
+              _dest.val,
+              _dest.k,
+              _dest.b,
+            );
+          }
+        }
+
+        this.curr.currValues[idxKey][key] = nextCurrValue;
+        this.curr.currVelocities[idxKey][key] = nextCurrVelocity;
+      });
+    });
+
+    if (forceUpdate) {
+      this.forceUpdate();
+    }
+  },
+
+  startRaf() {
+    this._rafId = requestAnimationFrame(() => {
+      this.step();
+      this.startRaf();
+    });
+  },
+
+  componentDidMount() {
+    this.startRaf();
+  },
+
+  componentWillUnmount() {
+    window.cancelAnimationFrame(this._rafId);
+    this._rafId = null;
+  },
+
+  render() {
+    const renderedChildren = this.props.children(this.curr.currValues);
+    return renderedChildren && React.Children.only(renderedChildren);
+  },
+});
