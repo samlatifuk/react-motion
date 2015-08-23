@@ -131,7 +131,7 @@ const Demo = React.createClass({
         <section className="main">
           <input className="toggle-all" type="checkbox" onChange={this.handleToggleAll} />
           <TransitionSpring
-            endValue={this.getEndValue()}
+            tos={this.getEndValue()}
             willLeave={this.willLeave}
             willEnter={this.willEnter}>
             {configs =>
@@ -140,20 +140,22 @@ const Demo = React.createClass({
                   const config = configs[date];
                   const {data: {isDone, text}, ...rest} = config;
                   return (
-                    <Child key={date} to={rest} className={isDone ? 'completed' : ''}>
-                      <div className="view">
-                        <input
-                          className="toggle"
-                          type="checkbox"
-                          onChange={this.handleDone.bind(null, date)}
-                          checked={isDone}
-                        />
-                        <label>{text}</label>
-                        <button
-                          className="destroy"
-                          onClick={this.handleDestroy.bind(null, date)}
-                        />
-                      </div>
+                    <Child key={date} to={config} style={{overflow: 'hidden'}}>
+                      <li className={isDone ? 'completed' : ''}>
+                        <div className="view">
+                          <input
+                            className="toggle"
+                            type="checkbox"
+                            onChange={this.handleDone.bind(null, date)}
+                            checked={isDone}
+                          />
+                          <label>{text}</label>
+                          <button
+                            className="destroy"
+                            onClick={this.handleDestroy.bind(null, date)}
+                          />
+                        </div>
+                      </li>
                     </Child>
                   );
                 })}

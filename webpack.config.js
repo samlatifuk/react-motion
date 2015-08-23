@@ -12,7 +12,7 @@ var entry = {
   demo0: './demos/demo0/index.jsx',
   demo1: './demos/demo1/index.jsx',
   // demo2: './demos/demo2/index.jsx',
-  // demo3: './demos/demo3/index.jsx',
+  demo3: './demos/demo3/index.jsx',
   // demo4: './demos/demo4/index.jsx',
   demo5: './demos/demo5/index.jsx',
   // demo6: './demos/demo6/index.jsx',
