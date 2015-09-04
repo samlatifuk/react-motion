@@ -6,6 +6,12 @@ import stepper from './stepper';
 import presets from './presets';
 import hasReachedDest from './hasReachedDest';
 
+// function requestAnimationFrame(f) {
+//   return setTimeout(f, 500);
+// }
+
+window.j = JSON.stringify;
+
 function mapObj(o, f) {
   return Object.keys(o).reduce((acc, key) => {
     acc[key] = f(o[key], key);

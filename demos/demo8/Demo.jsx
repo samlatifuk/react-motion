@@ -68,8 +68,23 @@ const Demo = React.createClass({
 
   render() {
     const {mouse, isPressed, lastPressed, order} = this.state;
-    const endValue = range(4).map(i => {
+    const springs = range(4).map(i => {
       if (lastPressed === i && isPressed) {
+        return (
+          <div
+            key={n}
+            className="demo8-item"
+            onMouseDown={this.handleMouseDown.bind(null, n, y.val)}
+            onTouchStart={this.handleTouchStart.bind(null, n, y.val)}
+            style={{
+              boxShadow: `rgba(0, 0, 0, 0.2) 0px ${shadow.val}px ${2 * shadow.val}px 0px`,
+              transform: `translate3d(0, ${y.val}px, 0) scale(${scale.val})`,
+              zIndex: n === lastPressed ? 99 : n,
+            }}>
+            {order.indexOf(n) + 1}
+          </div>
+        );
+
         return {
           scale: {val: 1.1, config: springConfig},
           shadow: {val: 16, config: springConfig},
@@ -84,27 +99,9 @@ const Demo = React.createClass({
     });
 
     return (
-      <Spring endValue={endValue}>
-        {items =>
-          <div className="demo8">
-            {items.map(({scale, shadow, y}, n) =>
-              <div
-                key={n}
-                className="demo8-item"
-                onMouseDown={this.handleMouseDown.bind(null, n, y.val)}
-                onTouchStart={this.handleTouchStart.bind(null, n, y.val)}
-                style={{
-                  boxShadow: `rgba(0, 0, 0, 0.2) 0px ${shadow.val}px ${2 * shadow.val}px 0px`,
-                  transform: `translate3d(0, ${y.val}px, 0) scale(${scale.val})`,
-                  WebkitTransform: `translate3d(0, ${y.val}px, 0) scale(${scale.val})`,
-                  zIndex: n === lastPressed ? 99 : n,
-                }}>
-                {order.indexOf(n) + 1}
-              </div>
-            )}
-          </div>
-        }
-      </Spring>
+      <div className="demo8">
+        {springs}
+      </div>
     );
   },
 });

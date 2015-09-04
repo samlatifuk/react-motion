@@ -15,6 +15,10 @@ const Demo = React.createClass({
     this.handleMouseDown();
   },
 
+  componentDidMount() {
+    debugger;
+  },
+
   render() {
     return (
       <div>
@@ -24,6 +28,7 @@ const Demo = React.createClass({
 
         <div className="demo0">
           <Spring
+            ref="asd"
             className="demo0-block"
             to={{
               left: this.state.open ? 50 : 350,
